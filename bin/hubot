@@ -55,6 +55,8 @@ if Options.create
   creator.run()
 else
   switch Options.adapter
+    when "hipchat"
+      Hubot = require("hubot/hipchat").HipChatBot
     when "irc"
       Hubot = require("hubot/irc").IrcBot
     when "campfire"

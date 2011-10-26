@@ -1,10 +1,15 @@
-Robot = require 'robot'
-Xmpp  = require 'node-xmpp'
+Robot   = require 'robot'
+Xmpp    = require 'node-xmpp'
+Request = require 'request' # http://github.com/mikeal/request
 
 # https://gist.github.com/940969
 
 class HipChatBot extends Robot
 
+  # Implement Timer
+  # Implement Group Functionally
+  # Implement Lunch Feature
+  
   # (TODO) change this to xmpp callback
   send: (user, strings...) ->
     strings.forEach (str) =>
@@ -17,33 +22,41 @@ class HipChatBot extends Robot
 
   run: ->
     self = @
-    options =
-      username: process.env.HUBOT_HIPCHAT_USERNAME
-      password: process.env.HUBOT_HIPCHAT_PASSWORD
-      nickname: process.env.HUBOT_HIPCHAT_NICKNAME
-      rooms:    process.env.HUBOT_HIPCHAT_ROOMS.split(',')
-      server:   'chat.hipchat.com'
+    @options =
+      auth_token: process.env.HUBOT_HIPCHAT_AUTH_TOKEN
+      username:   process.env.HUBOT_HIPCHAT_USERNAME
+      password:   process.env.HUBOT_HIPCHAT_PASSWORD
+      nickname:   process.env.HUBOT_HIPCHAT_NICKNAME
+      server:     'chat.hipchat.com'
 
-    console.log options
+      # GET THIS FROM API INSTEAD
+      #rooms:    process.env.HUBOT_HIPCHAT_ROOMS.split(',')
+
+    console.log @options
 
     # /bot is attached to prevent the chat history from being displayed
     bot = new Xmpp.Client
-      jid: "#{options.username}@#{options.server}/bot"
-      password: options.password
+      jid: "#{@options.username}@#{@options.server}/bot"
+      password: @options.password
 
-    # unused at the moment...
-    [next_id, user_id] = [1, {}]
 
     bot.on 'online', ->
       console.log "We're online!"
 
       # set bot as available
       bot.send new xmpp.Element('presence', { type: 'available' }).
-        c('show').t('chat')
+        c('show').t('chat').
+        c('status').t('I am but a bot')
 
-      # join room, chat history is disabled by /bot in jabber_id, hipchat limitation
-      bot.send new xmpp.Element('presence', { to: "#{room_jid}/#{room_nick}" }).
-        c('x', { xmlns: 'http://jabber.org/protocol/muc' })
+      # using the hipchat api, grab the rooms feed and login to ach room
+      uri = "https://api.hipchat.com/v1/rooms/list?format=json&auth_token=#{@options.auth_token}"
+      request = {'uri': uri}, (error, response, body) ->
+        data = JSON.parse(body)
+        for room in data.rooms
+          unless room.is_archived
+            room_jid = room.xmpp_jid
+            bot.send new xmpp.Element('presence', { to: "#{room_jid}/#{@options.nickname}" }).
+              c('x', { xmlns: 'http://jabber.org/protocol/muc' })
 
       # send keepalive data or server will disconnect us after 150s of inactivity
       setInterval -> bot.send ' ', 30000
