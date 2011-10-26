@@ -26,11 +26,12 @@ class HipChatBot extends Robot
 
     console.log options
 
+    # /bot is attached to prevent the chat history from being displayed
     bot = new Xmpp.Client
-      jid: "#{options.username}@#{options.server}"
+      jid: "#{options.username}@#{options.server}/bot"
       password: options.password
 
-    # unused...
+    # unused at the moment...
     [next_id, user_id] = [1, {}]
 
     bot.on 'online', ->
@@ -40,7 +41,7 @@ class HipChatBot extends Robot
       bot.send new xmpp.Element('presence', { type: 'available' }).
         c('show').t('chat')
 
-      # join room (and request no chat history)
+      # join room, chat history is disabled by /bot in jabber_id, hipchat limitation
       bot.send new xmpp.Element('presence', { to: "#{room_jid}/#{room_nick}" }).
         c('x', { xmlns: 'http://jabber.org/protocol/muc' })
 
